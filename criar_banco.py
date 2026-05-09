@@ -16,14 +16,23 @@ def criar_banco():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            senha TEXT NOT NULL DEFAULT '',
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_admin INTEGER NOT NULL DEFAULT 0
         )
     ''')
+
+    cursor.execute('PRAGMA table_info(usuarios)')
+    colunas = [row[1] for row in cursor.fetchall()]
+    if 'senha' not in colunas:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN senha TEXT NOT NULL DEFAULT ''")
+    if 'is_admin' not in colunas:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
     
     conexao.commit()
     conexao.close()
     
-    print(f"✓ Banco de dados criado com sucesso em: {DB_PATH}")
+    print(f"Banco de dados criado com sucesso em: {DB_PATH}")
 
 if __name__ == '__main__':
     criar_banco()
