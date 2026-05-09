@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Painel</title>
+</head>
+<body>
+
+<h2>Painel de Produção</h2>
+{% if logged_user %}
+    <p>Usuário logado: <strong>{{ logged_user }}</strong>{% if is_admin %} (administrador){% endif %}</p>
+    <p><a href="/logout">Logout</a></p>
+{% else %}
+    <p>Nenhum usuário logado.</p>
+{% endif %}
+
+<table border="1">
+
+<tr>
+    <th>ID</th>
+    <th>Nome</th>
+    <th>CPF</th>
+    <th>Status</th>
+</tr>
+
+{% for item in dados %}
+
+<tr>
+    <td>{{ item[0] }}</td>
+    <td>{{ item[1] }}</td>
+    <td>{{ item[2] }}</td>
+    <td>{{ item[3] }}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+</body>
+</html>

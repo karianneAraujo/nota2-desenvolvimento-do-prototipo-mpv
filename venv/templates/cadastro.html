@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Cadastro de Administrador - Digisus Mirador</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 500px;
+                margin: 50px auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .cadastro-container {
+                background: white;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            h2 {
+                text-align: center;
+                color: #333;
+                margin-bottom: 30px;
+            }
+            .form-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                margin-bottom: 5px;
+                color: #555;
+                font-weight: bold;
+            }
+            input[type="text"], input[type="email"], input[type="password"] {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 16px;
+                box-sizing: border-box;
+            }
+            .password-strength {
+                margin-top: 5px;
+                font-size: 12px;
+                color: #666;
+            }
+            .password-strength.weak { color: #dc3545; }
+            .password-strength.medium { color: #ffc107; }
+            .password-strength.strong { color: #28a745; }
+            button {
+                width: 100%;
+                padding: 12px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            }
+            button:hover {
+                background-color: #218838;
+            }
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 20px;
+                color: #007bff;
+                text-decoration: none;
+            }
+            .back-link:hover {
+                text-decoration: underline;
+            }
+            .error-message {
+                color: #dc3545;
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            .success-message {
+                color: #155724;
+                background-color: #d4edda;
+                border: 1px solid #c3e6cb;
+                padding: 10px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="cadastro-container">
+            <h2>Cadastro de Administrador</h2>
+            {% if logged_user %}
+                <p>Usuário logado: <strong>{{ logged_user }}</strong>{% if is_admin %} (administrador){% endif %}</p>
+            {% endif %}
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if 'sucesso' in message.lower() %}
+                            <div class="success-message">{{ message }}</div>
+                        {% else %}
+                            <div class="error-message">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/cadastro" id="cadastroForm">
+                <div class="form-group">
+                    <label for="nome">Nome Completo:</label>
+                    <input type="text" id="nome" name="nome" required
+                           placeholder="Digite seu nome completo">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email (Login):</label>
+                    <input type="email" id="email" name="email" required
+                           placeholder="seu.email@exemplo.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="password" id="senha" name="senha" required
+                           placeholder="Digite uma senha forte" minlength="6">
+                    <div class="password-strength" id="passwordStrength"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmar_senha">Confirmar Senha:</label>
+                    <input type="password" id="confirmar_senha" name="confirmar_senha" required
+                           placeholder="Confirme sua senha">
+                </div>
+
+                <button type="submit">Cadastrar Administrador</button>
+            </form>
+
+            <a href="/login" class="back-link">← Voltar ao Login</a>
+        </div>
+
+        <script>
+            // Validação de senha em tempo real
+            document.getElementById('senha').addEventListener('input', function() {
+                const senha = this.value;
+                const strengthIndicator = document.getElementById('passwordStrength');
+
+                if (senha.length === 0) {
+                    strengthIndicator.textContent = '';
+                    return;
+                }
+
+                let strength = 0;
+                let feedback = [];
+
+                if (senha.length >= 8) strength++;
+                else feedback.push('pelo menos 8 caracteres');
+
+                if (/[a-z]/.test(senha)) strength++;
+                else feedback.push('letra minúscula');
+
+                if (/[A-Z]/.test(senha)) strength++;
+                else feedback.push('letra maiúscula');
+
+                if (/[0-9]/.test(senha)) strength++;
+                else feedback.push('número');
+
+                if (/[^A-Za-z0-9]/.test(senha)) strength++;
+                else feedback.push('caractere especial');
+
+                strengthIndicator.className = 'password-strength';
+
+                if (strength <= 2) {
+                    strengthIndicator.classList.add('weak');
+                    strengthIndicator.textContent = 'Fraca: ' + feedback.join(', ');
+                } else if (strength <= 3) {
+                    strengthIndicator.classList.add('medium');
+                    strengthIndicator.textContent = 'Média: Considere adicionar ' + feedback.join(', ');
+                } else {
+                    strengthIndicator.classList.add('strong');
+                    strengthIndicator.textContent = 'Forte! ✓';
+                }
+            });
+
+            // Validação do formulário
+            document.getElementById('cadastroForm').addEventListener('submit', function(e) {
+                const senha = document.getElementById('senha').value;
+                const confirmarSenha = document.getElementById('confirmar_senha').value;
+
+                if (senha !== confirmarSenha) {
+                    alert('As senhas não coincidem!');
+                    e.preventDefault();
+                    return false;
+                }
+
+                if (senha.length < 6) {
+                    alert('A senha deve ter pelo menos 6 caracteres!');
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        </script>
+    </body>
+</html>
