@@ -10,7 +10,6 @@ def criar_banco():
     conexao = sqlite3.connect(str(DB_PATH))
     cursor = conexao.cursor()
     
-    # Exemplo de tabela - ajuste conforme necessário
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,6 +18,31 @@ def criar_banco():
             senha TEXT NOT NULL DEFAULT '',
             data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_admin INTEGER NOT NULL DEFAULT 0
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            cpf TEXT NOT NULL,
+            cartao_sus TEXT NOT NULL,
+            data_nascimento TEXT,
+            status TEXT NOT NULL DEFAULT 'Ativo',
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS producao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            data_atendimento TEXT NOT NULL,
+            servico TEXT NOT NULL,
+            quantidade INTEGER NOT NULL DEFAULT 1,
+            valor REAL NOT NULL DEFAULT 0,
+            observacao TEXT,
+            FOREIGN KEY(paciente_id) REFERENCES pacientes(id)
         )
     ''')
 

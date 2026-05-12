@@ -1,39 +1,200 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Painel</title>
+    <meta charset="utf-8" />
+    <title>Painel de Produção - Digisus Mirador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h2, h3 {
+            color: #343a40;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-top: 12px;
+        }
+        th, td {
+            padding: 12px 10px;
+            border: 1px solid #dee2e6;
+            text-align: left;
+        }
+        th {
+            background: #e9ecef;
+        }
+        .alert {
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
 </head>
 <body>
+    <div class="header">
+        <div>
+            <h2>Painel de Produção e Monitoramento</h2>
+            {% if logged_user %}
+                <p>Usuário logado: <strong>{{ logged_user }}</strong>{% if is_admin %} (administrador){% endif %}</p>
+            {% else %}
+                <p>Nenhum usuário logado.</p>
+            {% endif %}
+        </div>
+        <div>
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
 
-<h2>Painel de Produção</h2>
-{% if logged_user %}
-    <p>Usuário logado: <strong>{{ logged_user }}</strong>{% if is_admin %} (administrador){% endif %}</p>
-    <p><a href="/logout">Logout</a></p>
-{% else %}
-    <p>Nenhum usuário logado.</p>
-{% endif %}
+    <div class="summary-grid">
+        <div class="card">
+            <h3>Pacientes</h3>
+            <p>Total: <strong>{{ total_pacientes }}</strong></p>
+            <p>CPF inválidos: <strong>{{ invalid_cpfs|length }}</strong></p>
+            <p>Cartões SUS inválidos: <strong>{{ invalid_sus|length }}</strong></p>
+        </div>
+        <div class="card">
+            <h3>Produção</h3>
+            <p>Total de registros: <strong>{{ total_producao }}</strong></p>
+            <p>Inconsistências: <strong>{{ inconsistencias_producao|length }}</strong></p>
+        </div>
+        <div class="card">
+            <h3>Duplicidades</h3>
+            <p>CPF duplicados: <strong>{{ duplicate_cpfs|length }}</strong></p>
+            <p>Cartões SUS duplicados: <strong>{{ duplicate_sus|length }}</strong></p>
+        </div>
+    </div>
 
-<table border="1">
+    <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items:center;">
+            <h3>Monitoramento de pacientes</h3>
+            <a href="/paciente/novo">Cadastrar novo paciente</a>
+        </div>
 
-<tr>
-    <th>ID</th>
-    <th>Nome</th>
-    <th>CPF</th>
-    <th>Status</th>
-</tr>
+        {% if pacientes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Cartão SUS</th>
+                        <th>Status</th>
+                        <th>Validação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paciente in pacientes %}
+                        <tr>
+                            <td>{{ paciente[0] }}</td>
+                            <td>{{ paciente[1] }}</td>
+                            <td>{{ paciente[2] }}</td>
+                            <td>{{ paciente[3] }}</td>
+                            <td>{{ paciente[4] }}</td>
+                            <td>
+                                {% if not validar_cpf(paciente[2]) or not validar_cartao_sus(paciente[3]) %}
+                                    <span style="color:#d9534f; font-weight:bold;">Inválido</span>
+                                {% else %}
+                                    <span style="color:#28a745; font-weight:bold;">OK</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-warning">Não há pacientes cadastrados ainda.</div>
+        {% endif %}
+    </div>
 
-{% for item in dados %}
+    {% if invalid_cpfs %}
+        <div class="alert alert-danger">
+            <strong>CPF inválidos:</strong>
+            <ul>
+                {% for paciente in invalid_cpfs %}
+                    <li>{{ paciente[1] }} - {{ paciente[2] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-<tr>
-    <td>{{ item[0] }}</td>
-    <td>{{ item[1] }}</td>
-    <td>{{ item[2] }}</td>
-    <td>{{ item[3] }}</td>
-</tr>
+    {% if invalid_sus %}
+        <div class="alert alert-danger">
+            <strong>Cartões SUS inválidos:</strong>
+            <ul>
+                {% for paciente in invalid_sus %}
+                    <li>{{ paciente[1] }} - {{ paciente[3] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-{% endfor %}
+    {% if duplicate_cpfs or duplicate_sus %}
+        <div class="alert alert-warning">
+            <strong>Duplicidades encontradas:</strong>
+            <ul>
+                {% for item in duplicate_cpfs %}
+                    <li>CPF {{ item[0] }} aparece {{ item[1] }} vezes</li>
+                {% endfor %}
+                {% for item in duplicate_sus %}
+                    <li>Cartão SUS {{ item[0] }} aparece {{ item[1] }} vezes</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-</table>
-
+    {% if inconsistencias_producao %}
+        <div class="alert alert-danger">
+            <strong>Inconsistências de produção:</strong>
+            <ul>
+                {% for item in inconsistencias_producao %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 </body>
 </html>
