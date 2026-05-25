@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import sqlite3
 from pathlib import Path
@@ -8,20 +9,56 @@ TEMPLATE_FOLDER = Path(__file__).parent.parent / 'venv' / 'templates'
 app = Flask(__name__, template_folder=str(TEMPLATE_FOLDER))
 app.secret_key = 'digisus_mirador_secret_key_2024'
 
-@app.context_processor
-def inject_user():
+# Rota para contagem de CPFs e cartões SUS duplicados
+@app.route('/contagem_duplicados')
+def contagem_duplicados():
+    conexao = sqlite3.connect(str(DB_PATH))
+    cursor = conexao.cursor()
+    # Contar CPFs duplicados
+    cursor.execute("SELECT cpf, COUNT(*) as qtd FROM pacientes WHERE cpf != '' GROUP BY cpf HAVING qtd > 1")
+    cpfs_duplicados = cursor.fetchall()
+    total_cpfs_duplicados = len(cpfs_duplicados)
+    # Contar cartões SUS duplicados
+    cursor.execute("SELECT cartao_sus, COUNT(*) as qtd FROM pacientes WHERE cartao_sus != '' GROUP BY cartao_sus HAVING qtd > 1")
+    sus_duplicados = cursor.fetchall()
+    total_sus_duplicados = len(sus_duplicados)
+    conexao.close()
+    return f"CPFs duplicados: {total_cpfs_duplicados}<br>Cartões SUS duplicados: {total_sus_duplicados}"
+
+# Função para normalizar dígitos (remover caracteres não numéricos)
+def normalize_digits(value):
+    return ''.join(filter(str.isdigit, value or ''))
+
+# Caminho do banco de dados SQLite
+DB_PATH = Path(__file__).parent.parent / 'banco.db'
+
+# Caminho da pasta template
+TEMPLATE_FOLDER = Path(__file__).parent.parent / 'venv' / 'templates'
+
+
+app = Flask(__name__, template_folder=str(TEMPLATE_FOLDER))
+app.secret_key = 'digisus_mirador_secret_key_2024'
+
+# Rota para contagem de duplicados
+@app.route('/contagem_duplicados')
+def contagem_duplicados():
+    conexao = sqlite3.connect(str(DB_PATH))
+    cursor = conexao.cursor()
+    cursor.execute("SELECT COUNT(*) FROM (SELECT cpf FROM pacientes WHERE cpf != '' GROUP BY cpf HAVING COUNT(*) > 1)")
+    qtd_cpfs_duplicados = cursor.fetchone()[0]
+    cursor.execute("SELECT SUM(cnt) FROM (SELECT COUNT(*) as cnt FROM pacientes WHERE cpf != '' GROUP BY cpf HAVING COUNT(*) > 1)")
+    total_registros_cpfs_duplicados = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(*) FROM (SELECT cartao_sus FROM pacientes WHERE cartao_sus != '' GROUP BY cartao_sus HAVING COUNT(*) > 1)")
+    qtd_sus_duplicados = cursor.fetchone()[0]
+    cursor.execute("SELECT SUM(cnt) FROM (SELECT COUNT(*) as cnt FROM pacientes WHERE cartao_sus != '' GROUP BY cartao_sus HAVING COUNT(*) > 1)")
+    total_registros_sus_duplicados = cursor.fetchone()[0] or 0
+    conexao.close()
     return {
-        'logged_user': session.get('user_name'),
-        'is_admin': session.get('is_admin', False),
-        'admin_exists': has_admin_user()
+        'valores_cpfs_duplicados': qtd_cpfs_duplicados,
+        'total_registros_cpfs_duplicados': total_registros_cpfs_duplicados,
+        'valores_sus_duplicados': qtd_sus_duplicados,
+        'total_registros_sus_duplicados': total_registros_sus_duplicados
     }
-
-DB_PATH = Path(__file__).parent.parent / 'banco_dados.db'
-
-
-def normalize_digits(value: str) -> str:
-    return ''.join(ch for ch in (value or '') if ch.isdigit())
-
 
 def validar_cpf(cpf: str) -> bool:
     cpf = normalize_digits(cpf)
@@ -52,8 +89,11 @@ app.jinja_env.globals.update(validar_cpf=validar_cpf, validar_cartao_sus=validar
 
 
 def table_exists(cursor, name: str) -> bool:
-    cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,))
-    return cursor.fetchone() is not None
+    try:
+        cursor.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", (name,))
+        return cursor.fetchone() is not None
+    except Exception:
+        return False
 
 
 @app.route('/')
@@ -69,6 +109,10 @@ def painel():
     invalid_sus = []
     duplicate_cpfs = []
     duplicate_sus = []
+    duplicate_cpfs_total = 0
+    duplicate_sus_total = 0
+    duplicate_cpfs_excess = 0
+    duplicate_sus_excess = 0
     inconsistencias_producao = []
     total_pacientes = 0
     total_producao = 0
@@ -91,6 +135,10 @@ def painel():
             duplicate_cpfs = cursor.fetchall()
             cursor.execute('SELECT cartao_sus, COUNT(*) FROM pacientes WHERE cartao_sus != "" GROUP BY cartao_sus HAVING COUNT(*) > 1')
             duplicate_sus = cursor.fetchall()
+            duplicate_cpfs_total = sum(row[1] for row in duplicate_cpfs)
+            duplicate_sus_total = sum(row[1] for row in duplicate_sus)
+            duplicate_cpfs_excess = sum(row[1] - 1 for row in duplicate_cpfs)
+            duplicate_sus_excess = sum(row[1] - 1 for row in duplicate_sus)
 
         if table_exists(cursor, 'producao'):
             total_producao = cursor.execute('SELECT COUNT(*) FROM producao').fetchone()[0]
@@ -138,6 +186,10 @@ def painel():
         invalid_sus=invalid_sus,
         duplicate_cpfs=duplicate_cpfs,
         duplicate_sus=duplicate_sus,
+        duplicate_cpfs_total=duplicate_cpfs_total,
+        duplicate_sus_total=duplicate_sus_total,
+        duplicate_cpfs_excess=duplicate_cpfs_excess,
+        duplicate_sus_excess=duplicate_sus_excess,
         inconsistencias_producao=inconsistencias_producao,
         total_pacientes=total_pacientes,
         total_producao=total_producao,
@@ -219,6 +271,10 @@ def paciente_novo_post():
 
         cursor.execute('SELECT id FROM pacientes WHERE cpf = ? OR cartao_sus = ?', (cpf_limpo, sus_limpo))
         if cursor.fetchone():
+            cursor.execute('''
+            INSERT INTO pacientes (nome, cpf, cartao_sus, data_nascimento, status)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (nome, cpf_limpo, sus_limpo, data_nascimento, "Duplicado"))
             conexao.close()
             flash('Paciente duplicado encontrado por CPF ou Cartão SUS.')
             return redirect(url_for('paciente_novo'))

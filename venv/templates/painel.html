@@ -103,8 +103,18 @@
         </div>
         <div class="card">
             <h3>Duplicidades</h3>
-            <p>CPF duplicados: <strong>{{ duplicate_cpfs|length }}</strong></p>
-            <p>Cartões SUS duplicados: <strong>{{ duplicate_sus|length }}</strong></p>
+            <p>Valores de CPF duplicados: <strong>{{ duplicate_cpfs|length }}</strong></p>
+            <p>Total de registros com CPF duplicado: <strong>{{ duplicate_cpfs_total }}</strong></p>
+            {% if duplicate_cpfs_total == 0 %}
+                <p style="font-style:italic;">Nenhum registro de CPF duplicado encontrado.</p>
+            {% endif %}
+            <p>Registros extras de CPF duplicado: <strong>{{ duplicate_cpfs_excess }}</strong></p>
+            <p>Valores de Cartão SUS duplicados: <strong>{{ duplicate_sus|length }}</strong></p>
+            <p>Total de registros com Cartão SUS duplicado: <strong>{{ duplicate_sus_total }}</strong></p>
+            {% if duplicate_sus_total == 0 %}
+                <p style="font-style:italic;">Nenhum registro de Cartão SUS duplicado encontrado.</p>
+            {% endif %}
+            <p>Registros extras de Cartão SUS duplicado: <strong>{{ duplicate_sus_excess }}</strong></p>
         </div>
     </div>
 

@@ -1,8 +1,9 @@
+
 import sqlite3
 from pathlib import Path
 
-# Defina o caminho do banco de dados
-DB_PATH = Path(__file__).parent / 'banco_dados.db'
+# Defina o caminho do banco de dados (deve ser igual ao do app)
+DB_PATH = Path(__file__).parent / 'banco.db'
 
 def criar_banco():
     """Cria o banco de dados com as tabelas necessárias."""
