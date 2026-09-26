@@ -1,0 +1,9 @@
+.git
+venv/Lib
+venv/Scripts
+venv/pyvenv.cfg
+__pycache__
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3

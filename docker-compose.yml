@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./banco.db:/app/banco.db
+    restart: unless-stopped
